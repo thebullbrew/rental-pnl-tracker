@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rental P&L Tracker — The Bull Brew</title>
+<meta name="description" content="Per-property profit & loss for landlords. Monthly and annual views, all in your browser.">
+<meta name="theme-color" content="#0A1F15">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<style>
+:root{
+  --bg:#0A1F15; --surface:#10281B; --surface2:#0C2117;
+  --text:#F2F0E4; --muted:#A9B3A4; --faint:#7C8A7E;
+  --gold:#D4AF37; --gold-soft:rgba(212,175,55,.28); --gold-line:rgba(212,175,55,.55);
+  --mal:#1E5C3A; --mal-bright:#2E8B57;
+  --red:#D4695E; --ox:#8A2E2E;
+  --serif:Georgia,'Times New Roman',serif;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:radial-gradient(1200px 600px at 50% -10%, #0E2A1C 0%, var(--bg) 60%) fixed, var(--bg);
+  color:var(--text); font-family:var(--sans); line-height:1.5; min-height:100vh}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px 90px}
+header.hero{padding:34px 4px 10px;text-align:center}
+.eyebrow{font-size:11px;letter-spacing:.32em;color:var(--gold);text-transform:uppercase;margin-bottom:10px}
+h1{font-family:var(--serif);font-size:34px;font-weight:700;color:var(--text);line-height:1.15}
+h1 .g{color:var(--gold)}
+.tagline{font-family:var(--serif);font-style:italic;color:var(--muted);margin-top:10px;font-size:16px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0 6px}
+.step{background:linear-gradient(180deg,#122C1E,var(--surface));border:1px solid var(--gold-soft);
+  border-radius:12px;padding:12px 10px;font-size:13px;color:var(--muted);position:relative}
+.step::before{content:'';position:absolute;top:0;left:12%;right:12%;height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold-line),transparent);opacity:.7;border-radius:2px}
+.step b{display:block;color:var(--gold);font-family:var(--serif);font-size:14px;margin-bottom:4px}
+.step .n{color:var(--faint);font-size:11px;letter-spacing:.15em}
+/* month bar + tabs */
+.monthbar{display:flex;align-items:center;justify-content:center;gap:14px;margin:18px 0 4px}
+.monthbar button{background:var(--surface);border:1px solid var(--gold-soft);color:var(--gold);
+  width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer}
+.monthbar button:active{transform:scale(.94)}
+.monthbar .m{font-family:var(--serif);font-size:20px;color:var(--text);min-width:190px;text-align:center}
+nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:rgba(10,31,21,.96);
+  backdrop-filter:blur(6px);border-bottom:1px solid var(--gold-soft);margin:12px -16px 0;padding:0 16px;overflow-x:auto}
+nav.tabs button{background:none;border:none;color:var(--muted);font-family:var(--serif);font-size:15px;
+  padding:14px 14px 12px;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent}
+nav.tabs button.on{color:var(--gold);border-bottom-color:var(--gold)}
+/* cards */
+.card{background:linear-gradient(180deg,#122C1E,var(--surface));border:1px solid var(--gold-soft);
+  border-radius:14px;padding:18px;position:relative;margin:14px 0}
+.card::before{content:'';position:absolute;top:0;left:8%;right:8%;height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold-line),transparent);opacity:.65;border-radius:2px}
+.card h2{font-family:var(--serif);font-size:20px;color:var(--text);margin-bottom:2px}
+.card .sub{color:var(--muted);font-size:13px;margin-bottom:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.stat{background:var(--surface2);border:1px solid rgba(212,175,55,.14);border-radius:10px;padding:12px}
+.stat .l{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:4px}
+.stat .v{font-family:var(--serif);font-size:22px;color:var(--gold)}
+.stat .v.neg{color:var(--red)} .stat .v.pos{color:var(--gold)}
+.hero-net{text-align:center;padding:8px 0 2px}
+.hero-net .v{font-family:var(--serif);font-size:46px;color:var(--gold);line-height:1.1}
+.hero-net .v.neg{color:var(--red)}
+.hero-net .l{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+/* wax seals */
+.sealrow{display:flex;align-items:center;gap:14px;margin-top:12px}
+.seal{flex:0 0 auto;width:96px;height:96px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;font-family:var(--serif);font-size:11px;font-weight:700;letter-spacing:.1em;line-height:1.35;padding:10px}
+.seal.cow{background:radial-gradient(circle at 35% 28%, #2F8B57, var(--mal) 55%, #123B24);
+  border:3px double var(--gold);color:var(--text);box-shadow:0 6px 18px rgba(0,0,0,.55), inset 0 2px 6px rgba(255,255,255,.15)}
+.seal.bleed{background:radial-gradient(circle at 35% 28%, #B04444, var(--ox) 55%, #4A1414);
+  border:3px double var(--gold);color:var(--text);box-shadow:0 6px 18px rgba(0,0,0,.55), inset 0 2px 6px rgba(255,255,255,.12)}
+.seal.tread{background:rgba(212,175,55,.06);border:3px double var(--gold);color:var(--gold);
+  box-shadow:0 6px 18px rgba(0,0,0,.45)}
+.seal small{display:block;font-size:9px;font-weight:400;letter-spacing:.18em;color:inherit;opacity:.85}
+/* property cards */
+.prop-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.prop-name{font-family:var(--serif);font-size:19px}
+.prop-meta{color:var(--faint);font-size:12px;margin-top:2px}
+.kv{display:flex;justify-content:space-between;font-size:14px;padding:5px 0;border-bottom:1px dashed rgba(212,175,55,.14)}
+.kv:last-child{border-bottom:none}
+.kv .k{color:var(--muted)} .kv .n{font-family:var(--serif);color:var(--text)}
+.kv .n.pos{color:var(--gold)} .kv .n.neg{color:var(--red)}
+.badge{display:inline-block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  border:1px solid var(--gold-soft);color:var(--gold);border-radius:20px;padding:2px 10px;margin-left:8px;vertical-align:middle}
+/* chart */
+.chart{width:100%;height:auto;display:block;margin-top:6px}
+.chart .bl{fill:var(--faint);font-size:11px;font-family:var(--sans)}
+.chart .bv{fill:var(--muted);font-size:10px;font-family:var(--sans)}
+/* forms */
+label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
+input,select,textarea{width:100%;background:#0B1F16;border:1px solid var(--gold-soft);color:var(--text);
+  border-radius:10px;padding:13px 12px;font-size:16px;font-family:var(--sans)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold)}
+.seg{display:flex;gap:8px}
+.seg button{flex:1;padding:13px;border-radius:10px;border:1px solid var(--gold-soft);background:transparent;
+  color:var(--muted);font-size:15px;cursor:pointer;font-family:var(--serif)}
+.seg button.on{background:var(--mal);border-color:var(--gold);color:var(--text)}
+.btn{display:block;width:100%;padding:15px;border:none;border-radius:12px;font-size:16px;font-family:var(--serif);
+  font-weight:700;cursor:pointer;margin-top:16px;letter-spacing:.02em}
+.btn.gold{background:linear-gradient(180deg,#E2C055,var(--gold));color:#0A1F15}
+.btn.ghost{background:transparent;border:1px solid var(--gold-soft);color:var(--gold)}
+.btn.danger{background:transparent;border:1px solid var(--ox);color:var(--red)}
+.btn:active{transform:scale(.98)}
+.btnrow{display:flex;gap:8px} .btnrow .btn{margin-top:12px}
+/* entries */
+.entry{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid rgba(212,175,55,.12)}
+.entry .d{flex:0 0 52px;text-align:center}
+.entry .d .day{font-family:var(--serif);font-size:20px;color:var(--text)}
+.entry .d .mon{font-size:10px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+.entry .info{flex:1;min-width:0}
+.entry .info .t{font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.entry .info .s{font-size:12px;color:var(--faint)}
+.entry .amt{font-family:var(--serif);font-size:17px;white-space:nowrap}
+.entry .amt.in{color:var(--gold)} .entry .amt.out{color:var(--red)}
+.iconbtn{background:none;border:1px solid rgba(212,175,55,.25);color:var(--muted);border-radius:8px;
+  width:34px;height:34px;font-size:15px;cursor:pointer;flex:0 0 auto}
+/* annual table */
+.tblwrap{overflow-x:auto;margin:0 -4px;padding:0 4px}
+table.annual{border-collapse:collapse;width:100%;font-size:12.5px;min-width:560px}
+table.annual th,table.annual td{padding:8px 6px;text-align:right;border-bottom:1px solid rgba(212,175,55,.12);white-space:nowrap}
+table.annual th{color:var(--faint);font-weight:400;font-size:11px}
+table.annual td:first-child,table.annual th:first-child{text-align:left;color:var(--text);font-family:var(--serif)}
+table.annual td.pos{color:var(--gold)} table.annual td.neg{color:var(--red)}
+table.annual tr.total td{border-top:2px solid var(--gold-line);font-weight:700}
+/* insights */
+.insight{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px dashed rgba(212,175,55,.14);font-size:14px}
+.insight:last-child{border:none}
+.insight .dot{flex:0 0 10px;height:10px;border-radius:50%;background:var(--gold);margin-top:6px}
+.insight b{color:var(--gold);font-family:var(--serif)}
+.empty{text-align:center;color:var(--faint);padding:26px 10px;font-family:var(--serif);font-style:italic}
+footer{margin-top:34px;text-align:center;color:var(--faint);font-size:12px}
+footer .rule{width:120px;height:2px;margin:0 auto 12px;background:linear-gradient(90deg,transparent,var(--gold-line),transparent)}
+@media(max-width:420px){.grid3{grid-template-columns:1fr 1fr} h1{font-size:29px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="eyebrow">The Bull Brew &middot; Landlord Ledger</div>
+    <h1>Rental <span class="g">P&amp;L</span> Tracker</h1>
+    <p class="tagline">See exactly which properties make money &mdash; and which ones are lying to you.</p>
+    <div class="steps">
+      <div class="step"><span class="n">STEP 1</span><b>Add properties</b>Name, units, expected rent.</div>
+      <div class="step"><span class="n">STEP 2</span><b>Log the money</b>Rent in, bills out, month by month.</div>
+      <div class="step"><span class="n">STEP 3</span><b>Read the verdict</b>Every property earns its wax seal.</div>
+    </div>
+  </header>
+
+  <div class="monthbar" id="monthbar">
+    <button id="mprev" aria-label="Previous month">&lsaquo;</button>
+    <div class="m" id="mtitle"></div>
+    <button id="mnext" aria-label="Next month">&rsaquo;</button>
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button data-v="dash" class="on">Dashboard</button>
+    <button data-v="log">Log Money</button>
+    <button data-v="props">Properties</button>
+    <button data-v="annual">Annual</button>
+    <button data-v="export">Export</button>
+  </nav>
+
+  <main id="view"></main>
+
+  <footer>
+    <div class="rule"></div>
+    The ledger doesn&rsquo;t flatter. All data stays in your browser &mdash; no account, no cloud.
+  </footer>
+</div>
+<script>
+'use strict';
+/* ============ Rental P&L Tracker — Emerald Vault ============ */
+var LS='rentalpnl.v1';
+var INC=['Rent','Late Fees','Other Income'];
+var EXP=['Mortgage P&I','Property Tax','Insurance','Repairs','CapEx','Utilities','Management','HOA','Other'];
+
+function uid(){return 'x'+Math.random().toString(36).slice(2,10)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function fmt(c){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(c/100)}
+function parseAmt(s){var n=parseFloat(String(s).replace(/[$,\s]/g,''));return isNaN(n)?null:Math.round(n*100)}
+function pad(n){return (n<10?'0':'')+n}
+function mstr(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)}
+function mshift(m,delta){var y=+m.slice(0,4),mo=+m.slice(5,7)-1+delta;return (y+Math.floor(mo/12))+'-'+pad(((mo%12)+12)%12+1)}
+function mlabel(m){return new Date(+m.slice(0,4),+m.slice(5,7)-1,1).toLocaleString('en-US',{month:'long',year:'numeric'})}
+function mshort(m){return new Date(+m.slice(0,4),+m.slice(5,7)-1,1).toLocaleString('en-US',{month:'short'})}
+function dparts(ds){var p=ds.split('-');return {y:p[0],m:p[1],d:p[2]}}
+
+/* ---------- storage ---------- */
+function load(){try{var r=localStorage.getItem(LS);return r?JSON.parse(r):null}catch(e){return null}}
+function save(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
+function seed(){
+  var P=[{id:'p1',name:'Maple Street Duplex',units:2,expectedRent:290000,sample:true},
+         {id:'p2',name:'Oak Avenue House',units:1,expectedRent:180000,sample:true}];
+  var E=[],now=new Date();
+  for(var i=11;i>=0;i--){
+    var m=mshift(mstr(now),-i), ds1=m+'-01', ds5=m+'-05';
+    E.push({id:uid(),propertyId:'p1',kind:'income',category:'Rent',amountCents:i===2?145000:290000,date:ds1,note:i===2?'Unit B vacant half month':'',sample:true});
+    E.push({id:uid(),propertyId:'p1',kind:'expense',category:'Mortgage P&I',amountCents:110000,date:ds5,note:'',sample:true});
+    E.push({id:uid(),propertyId:'p1',kind:'expense',category:'Insurance',amountCents:12000,date:m+'-10',note:'',sample:true});
+    if(i===3)E.push({id:uid(),propertyId:'p1',kind:'expense',category:'Repairs',amountCents:65000,date:m+'-18',note:'Water heater element',sample:true});
+    E.push({id:uid(),propertyId:'p2',kind:'income',category:'Rent',amountCents:180000,date:ds1,note:'',sample:true});
+    E.push({id:uid(),propertyId:'p2',kind:'expense',category:'Mortgage P&I',amountCents:95000,date:ds5,note:'',sample:true});
+    E.push({id:uid(),propertyId:'p2',kind:'expense',category:'Utilities',amountCents:8000,date:m+'-12',note:'',sample:true});
+    if(i%3===0)E.push({id:uid(),propertyId:'p2',kind:'expense',category:'Property Tax',amountCents:20000,date:m+'-20',note:'Quarterly',sample:true});
+  }
+  return {properties:P,entries:E};
+}
+var S=load(); if(!S||!S.properties){S=seed();save()}
+
+/* ---------- state ---------- */
+var view='dash', curMonth=mstr(new Date()), curYear=new Date().getFullYear();
+var fKind='income', editingId=null, expProp='all';
+
+/* ---------- math ---------- */
+function inMonth(e,m){return e.date.slice(0,7)===m}
+function pInc(pid,m){var t=0;S.entries.forEach(function(e){if(e.propertyId===pid&&e.kind==='income'&&inMonth(e,m))t+=e.amountCents});return t}
+function pExp(pid,m){var t=0;S.entries.forEach(function(e){if(e.propertyId===pid&&e.kind==='expense'&&inMonth(e,m))t+=e.amountCents});return t}
+function pRent(pid,m){var t=0;S.entries.forEach(function(e){if(e.propertyId===pid&&e.kind==='income'&&e.category==='Rent'&&inMonth(e,m))t+=e.amountCents});return t}
+function verdict(inc,exp){
+  var net=inc-exp, ratio=inc>0?exp/inc:99;
+  if(net>0&&ratio<0.5)return {t:'CASH COW',c:'cow',s:'Keeps over half of what it earns.'};
+  if(net<0)return {t:'BLEEDING',c:'bleed',s:'Costs more than it brings in.'};
+  return {t:'TREADING WATER',c:'tread',s:'Alive, but barely swimming.'};
+}
+function propById(id){for(var i=0;i<S.properties.length;i++)if(S.properties[i].id===id)return S.properties[i];return null}
+
+/* ---------- views ---------- */
+function chartSVG(){
+  var months=[],vals=[],i,mx=1;
+  for(i=11;i>=0;i--){var m=mshift(curMonth,-i);months.push(m);var n=0;
+    S.properties.forEach(function(p){n+=pInc(p.id,m)-pExp(p.id,m)});vals.push(n);
+    if(Math.abs(n)>mx)mx=Math.abs(n);}
+  var W=620,top=24,bot=34,mid=top+((220-top-bot)/2),amp=(220-top-bot)/2-6;
+  var bw=(W-20)/12, s='';
+  s+='<svg class="chart" viewBox="0 0 '+W+' 220" role="img" aria-label="12-month net cash flow">';
+  s+='<line x1="10" y1="'+mid+'" x2="'+(W-10)+'" y2="'+mid+'" stroke="rgba(212,175,55,.3)" stroke-width="1"/>';
+  for(i=0;i<12;i++){
+    var v=vals[i],h=Math.abs(v)/mx*amp,x=10+i*bw+bw*0.18,w=bw*0.64;
+    var y=v>=0?mid-h:mid, fill=v>=0?'url(#gg)':'#8A2E2E';
+    s+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+Math.max(h,2).toFixed(1)+'" rx="3" fill="'+fill+'"/>';
+    s+='<text class="bl" x="'+(10+i*bw+bw/2).toFixed(1)+'" y="212" text-anchor="middle">'+mshort(months[i])+'</text>';
+    if(v!==0)s+='<text class="bv" x="'+(10+i*bw+bw/2).toFixed(1)+'" y="'+(v>=0?y-5:mid+h+13).toFixed(1)+'" text-anchor="middle">'+(v>=0?'+':'')+Math.round(v/100)+'</text>';
+  }
+  s+='<defs><linearGradient id="gg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E2C055"/><stop offset="1" stop-color="#9A7A24"/></linearGradient></defs></svg>';
+  return s;
+}
+
+function vDash(){
+  var inc=0,exp=0;
+  S.properties.forEach(function(p){inc+=pInc(p.id,curMonth);exp+=pExp(p.id,curMonth)});
+  var net=inc-exp, ratio=inc>0?Math.round(exp/inc*100):null;
+  var h='<div class="card"><div class="hero-net"><div class="v'+(net<0?' neg':'')+'">'+fmt(net)+'</div>'+
+    '<div class="l">Portfolio net &middot; '+esc(mlabel(curMonth))+'</div></div>'+
+    '<div class="grid3" style="margin-top:14px"><div class="stat"><div class="l">Income</div><div class="v">'+fmt(inc)+'</div></div>'+
+    '<div class="stat"><div class="l">Expenses</div><div class="v neg">'+fmt(exp)+'</div></div>'+
+    '<div class="stat"><div class="l">Expense ratio</div><div class="v">'+(ratio===null?'&mdash;':ratio+'%')+'</div></div></div></div>';
+  h+='<div class="card"><h2>Twelve-month trail</h2><div class="sub">Net cash flow per month. Champagne above the line, oxblood below.</div>'+chartSVG()+'</div>';
+  if(!S.properties.length){h+='<div class="card"><div class="empty">No properties yet. Add your first one under Properties.</div></div>';return h}
+  var rows=S.properties.map(function(p){
+    var i=pInc(p.id,curMonth),e=pExp(p.id,curMonth),n=i-e,v=verdict(i,e);
+    var r=i>0?Math.round(e/i*100):null, rent=pRent(p.id,curMonth);
+    var coll=(p.expectedRent>0&&rent>0)?Math.round(rent/p.expectedRent*100):null;
+    return {p:p,i:i,e:e,n:n,v:v,r:r,coll:coll};
+  });
+  rows.sort(function(a,b){return b.n-a.n});
+  rows.forEach(function(r){
+    h+='<div class="card"><div class="prop-head"><div><div class="prop-name">'+esc(r.p.name)+
+      (r.p.sample?'<span class="badge">Sample</span>':'')+'</div><div class="prop-meta">'+r.p.units+' unit'+(r.p.units===1?'':'s')+'</div></div></div>'+
+      '<div style="margin-top:10px"><div class="kv"><span class="k">Income</span><span class="n pos">'+fmt(r.i)+'</span></div>'+
+      '<div class="kv"><span class="k">Expenses</span><span class="n neg">'+fmt(r.e)+'</span></div>'+
+      '<div class="kv"><span class="k">Net cash flow</span><span class="n '+(r.n<0?'neg':'pos')+'">'+fmt(r.n)+'</span></div>'+
+      '<div class="kv"><span class="k">Expense ratio</span><span class="n">'+(r.r===null?'&mdash;':r.r+'%')+'</span></div>'+
+      '<div class="kv"><span class="k">Rent collected</span><span class="n">'+(r.coll===null?'&mdash;':r.coll+'% of expected')+'</span></div></div>'+
+      '<div class="sealrow"><div class="seal '+r.v.c+'">'+r.v.t+'<small>THE VERDICT</small></div><div style="font-size:13px;color:var(--muted)">'+r.v.s+'</div></div></div>';
+  });
+  var best=rows[0],worst=rows[rows.length-1];
+  h+='<div class="card"><h2>Straight talk</h2><div class="sub">What the numbers are actually saying.</div>';
+  h+='<div class="insight"><span class="dot"></span><div><b>'+esc(best.p.name)+'</b> carries the portfolio this month at '+fmt(best.n)+' net.</div></div>';
+  if(rows.length>1)h+='<div class="insight"><span class="dot"></span><div><b>'+esc(worst.p.name)+'</b> is the weakest link at '+fmt(worst.n)+' net. It gets one quarter to turn around, then it&rsquo;s on the chopping block.</div></div>';
+  rows.forEach(function(r){
+    if(r.coll!==null&&r.coll<100)h+='<div class="insight"><span class="dot"></span><div><b>'+esc(r.p.name)+'</b> collected '+r.coll+'% of expected rent &mdash; vacancy or arrears. The missing rent is the first suspect.</div></div>';
+    if(r.r!==null&&r.r>60)h+='<div class="insight"><span class="dot"></span><div><b>'+esc(r.p.name)+'</b> burns '+r.r+'% of income on expenses. Anything over 50% deserves an interrogation, line by line.</div></div>';
+  });
+  if(!rows.some(function(r){return (r.coll!==null&&r.coll<100)||(r.r!==null&&r.r>60)}))
+    h+='<div class="insight"><span class="dot"></span><div>Nothing alarming. Rents are collected, expenses are behaving. Enjoy it &mdash; it never lasts.</div></div>';
+  h+='</div>';
+  return h;
+}
+
+function catOptions(kind){return (kind==='income'?INC:EXP).map(function(c){return '<option>'+c+'</option>'}).join('')}
+function vLog(){
+  var h='<div class="card"><h2>Log money</h2><div class="sub">Rent in, bills out. Every entry lands in the ledger instantly.</div>';
+  h+='<label>Kind</label><div class="seg"><button id="kInc" class="'+(fKind==='income'?'on':'')+'">Income</button><button id="kExp" class="'+(fKind==='expense'?'on':'')+'">Expense</button></div>';
+  h+='<label>Property</label><select id="fProp">'+S.properties.map(function(p){return '<option value="'+p.id+'">'+esc(p.name)+'</option>'}).join('')+'</select>';
+  h+='<label>Category</label><select id="fCat">'+catOptions(fKind)+'</select>';
+  h+='<label>Amount</label><input id="fAmt" inputmode="decimal" placeholder="0.00">';
+  h+='<label>Date</label><input id="fDate" type="date" value="'+new Date().toISOString().slice(0,10)+'">';
+  h+='<label>Note (optional)</label><input id="fNote" placeholder="e.g. Unit B, March rent">';
+  h+='<button class="btn gold" id="fAdd">'+(editingId?'Save changes':'Add to ledger')+'</button>';
+  if(editingId)h+='<button class="btn ghost" id="fCancel">Cancel edit</button>';
+  h+='</div>';
+  var list=S.entries.slice().sort(function(a,b){return b.date<a.date?-1:1}).slice(0,25);
+  h+='<div class="card"><h2>Recent entries</h2><div class="sub">Newest first. Tap &#9998; to fix, &#10005; to remove.</div>';
+  if(!list.length)h+='<div class="empty">Nothing logged yet. The ledger is waiting.</div>';
+  list.forEach(function(e){
+    var p=propById(e.propertyId),dp=dparts(e.date);
+    var mon=new Date(+dp.y,+dp.m-1,1).toLocaleString('en-US',{month:'short'});
+    h+='<div class="entry"><div class="d"><div class="day">'+dp.d+'</div><div class="mon">'+mon+'</div></div>'+
+      '<div class="info"><div class="t">'+esc(e.category)+(e.note?' &middot; '+esc(e.note):'')+(e.sample?' <span class="badge">Sample</span>':'')+'</div>'+
+      '<div class="s">'+esc(p?p.name:'?')+'</div></div>'+
+      '<div class="amt '+(e.kind==='income'?'in':'out')+'">'+(e.kind==='income'?'+':'&minus;')+fmt(e.amountCents)+'</div>'+
+      '<button class="iconbtn" data-edit="'+e.id+'" aria-label="Edit">&#9998;</button>'+
+      '<button class="iconbtn" data-del="'+e.id+'" aria-label="Delete">&#10005;</button></div>';
+  });
+  h+='</div>';
+  return h;
+}
+
+function vProps(){
+  var h='<div class="card"><h2>Your properties</h2><div class="sub">The cast of characters. Add, rename, or retire them.</div>';
+  if(!S.properties.length)h+='<div class="empty">No properties yet. Add your first below.</div>';
+  S.properties.forEach(function(p){
+    h+='<div class="entry"><div class="info"><div class="t">'+esc(p.name)+(p.sample?' <span class="badge">Sample</span>':'')+'</div>'+
+      '<div class="s">'+p.units+' unit'+(p.units===1?'':'s')+' &middot; expected rent '+fmt(p.expectedRent)+'/mo</div></div>'+
+      '<button class="iconbtn" data-pedit="'+p.id+'" aria-label="Edit">&#9998;</button>'+
+      '<button class="iconbtn" data-pdel="'+p.id+'" aria-label="Delete">&#10005;</button></div>';
+  });
+  h+='</div><div class="card"><h2>Add a property</h2>'+
+    '<label>Name</label><input id="pName" placeholder="e.g. Maple Street Duplex">'+
+    '<label>Units</label><input id="pUnits" inputmode="numeric" placeholder="1">'+
+    '<label>Expected rent / month</label><input id="pRent" inputmode="decimal" placeholder="0.00">'+
+    '<button class="btn gold" id="pAdd">Add property</button></div>';
+  return h;
+}
+
+function vAnnual(){
+  var months=[],i;for(i=0;i<12;i++)months.push(curYear+'-'+pad(i+1));
+  var h='<div class="card"><h2>'+curYear+' in review</h2><div class="sub">Net cash flow per property, per month. The year, unfiltered.</div>'+
+    '<div class="monthbar" style="margin:6px 0 12px"><button id="yprev">&lsaquo;</button><div class="m" style="min-width:110px">'+curYear+'</div><button id="ynext">&rsaquo;</button></div>'+
+    '<div class="tblwrap"><table class="annual"><tr><th>Property</th>'+months.map(function(m){return '<th>'+mshort(m)+'</th>'}).join('')+'<th>Total</th></tr>';
+  var ptots=months.map(function(){return 0}),ai=0,ae=0;
+  S.properties.forEach(function(p){
+    var tot=0;h+='<tr><td>'+esc(p.name)+(p.sample?' <span class="badge">S</span>':'')+'</td>';
+    months.forEach(function(m,mi){var n=pInc(p.id,m)-pExp(p.id,m);tot+=n;ptots[mi]+=n;
+      h+='<td class="'+(n<0?'neg':'pos')+'">'+(n>=0?'+':'')+Math.round(n/100)+'</td>'});
+    h+='<td class="'+(tot<0?'neg':'pos')+'"><b>'+(tot>=0?'+':'')+fmt(tot)+'</b></td></tr>';
+  });
+  var gt=0;h+='<tr class="total"><td>Portfolio</td>';
+  ptots.forEach(function(n){gt+=n;h+='<td class="'+(n<0?'neg':'pos')+'">'+(n>=0?'+':'')+Math.round(n/100)+'</td>'});
+  h+='<td class="'+(gt<0?'neg':'pos')+'">'+(gt>=0?'+':'')+fmt(gt)+'</td></tr></table></div></div>';
+  S.entries.forEach(function(e){if(e.date.slice(0,4)===''+curYear){if(e.kind==='income')ai+=e.amountCents;else ae+=e.amountCents}});
+  h+='<div class="card"><div class="grid3"><div class="stat"><div class="l">Annual income</div><div class="v">'+fmt(ai)+'</div></div>'+
+    '<div class="stat"><div class="l">Annual expenses</div><div class="v neg">'+fmt(ae)+'</div></div>'+
+    '<div class="stat"><div class="l">Annual net</div><div class="v'+((ai-ae)<0?' neg':'')+'">'+fmt(ai-ae)+'</div></div></div></div>';
+  return h;
+}
+
+function download(name,content,type){
+  var b=new Blob([content],{type:type}),u=URL.createObjectURL(b),a=document.createElement('a');
+  a.href=u;a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(u);a.remove()},400);
+}
+function toCSV(propId){
+  var rows=[['property','date','kind','category','amount','note']];
+  S.entries.forEach(function(e){
+    if(propId!=='all'&&e.propertyId!==propId)return;
+    var p=propById(e.propertyId);
+    rows.push([(p?p.name:''),e.date,e.kind,e.category,(e.amountCents/100).toFixed(2),'"'+String(e.note||'').replace(/"/g,'""')+'"']);
+  });
+  return rows.map(function(r){return r.join(',')}).join('\n');
+}
+function vExport(){
+  var h='<div class="card"><h2>Take it with you</h2><div class="sub">Your data, your rules. Export for the CPA, back up for peace of mind.</div>';
+  h+='<label>CSV &mdash; pick a property or the whole portfolio</label><select id="xProp"><option value="all">Whole portfolio</option>'+
+    S.properties.map(function(p){return '<option value="'+p.id+'">'+esc(p.name)+'</option>'}).join('')+'</select>';
+  h+='<button class="btn gold" id="xCSV">Download CSV</button>';
+  h+='<div class="btnrow"><button class="btn ghost" id="xJSON">Back up (JSON)</button>'+
+    '<label class="btn ghost" style="text-align:center;cursor:pointer">Restore<input id="xRestore" type="file" accept=".json" style="display:none"></label></div>';
+  var hasSample=S.properties.some(function(p){return p.sample})||S.entries.some(function(e){return e.sample});
+  if(hasSample)h+='<button class="btn ghost" id="xSample">Clear sample data</button>';
+  h+='<button class="btn danger" id="xWipe">Delete everything</button></div>';
+  return h;
+}
+
+/* ---------- render & events ---------- */
+var V={dash:vDash,log:vLog,props:vProps,annual:vAnnual,export:vExport};
+function render(){
+  document.getElementById('mtitle').textContent=mlabel(curMonth);
+  var tabs=document.querySelectorAll('#tabs button');
+  for(var i=0;i<tabs.length;i++)tabs[i].classList.toggle('on',tabs[i].dataset.v===view);
+  document.getElementById('view').innerHTML=V[view]();
+  wire();
+}
+function val(id){var el=document.getElementById(id);return el?el.value.trim():''}
+
+function wire(){
+  var i,el;
+  if(view==='log'){
+    document.getElementById('kInc').onclick=function(){fKind='income';editingId=null;render()};
+    document.getElementById('kExp').onclick=function(){fKind='expense';editingId=null;render()};
+    if(editingId){var e=S.entries.filter(function(x){return x.id===editingId})[0];
+      if(e){fKind=e.kind;document.getElementById('kInc').className=e.kind==='income'?'on':'';
+        document.getElementById('kExp').className=e.kind==='expense'?'on':'';
+        document.getElementById('fProp').value=e.propertyId;document.getElementById('fCat').innerHTML=catOptions(e.kind);
+        document.getElementById('fCat').value=e.category;document.getElementById('fAmt').value=(e.amountCents/100).toFixed(2);
+        document.getElementById('fDate').value=e.date;document.getElementById('fNote').value=e.note||'';
+        document.getElementById('fAdd').textContent='Save changes';}}
+    document.getElementById('fAdd').onclick=function(){
+      var pid=val('fProp'),cat=val('fCat'),amt=parseAmt(val('fAmt')),dt=val('fDate'),note=val('fNote');
+      if(!pid){alert('Add a property first — the ledger needs a home for this money.');return}
+      if(amt===null||amt<0){alert('Enter a valid amount.');return}
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)){alert('Pick a date.');return}
+      if(editingId){var e2=S.entries.filter(function(x){return x.id===editingId})[0];
+        if(e2){e2.propertyId=pid;e2.kind=fKind;e2.category=cat;e2.amountCents=amt;e2.date=dt;e2.note=note;e2.sample=false}}
+      else S.entries.push({id:uid(),propertyId:pid,kind:fKind,category:cat,amountCents:amt,date:dt,note:note});
+      editingId=null;save();render();
+    };
+    var fc=document.getElementById('fCancel');if(fc)fc.onclick=function(){editingId=null;render()};
+    var eb=document.querySelectorAll('[data-edit]');for(i=0;i<eb.length;i++)eb[i].onclick=function(){editingId=this.dataset.edit;render();window.scrollTo(0,0)};
+    var db=document.querySelectorAll('[data-del]');for(i=0;i<db.length;i++)db[i].onclick=function(){
+      var id=this.dataset.del;if(confirm('Delete this entry?')){S.entries=S.entries.filter(function(x){return x.id!==id});save();render()}};
+  }
+  if(view==='props'){
+    document.getElementById('pAdd').onclick=function(){
+      var n=val('pName'),u=parseInt(val('pUnits'),10),r=parseAmt(val('pRent'));
+      if(!n){alert('Give the property a name.');return}
+      if(!(u>0)){alert('Units must be at least 1.');return}
+      if(r===null||r<0){alert('Enter the expected monthly rent.');return}
+      S.properties.push({id:uid(),name:n,units:u,expectedRent:r});save();render();
+    };
+    var pe=document.querySelectorAll('[data-pedit]');for(i=0;i<pe.length;i++)pe[i].onclick=function(){
+      var p=propById(this.dataset.pedit);if(!p)return;
+      var n=prompt('Property name',p.name);if(n===null)return;
+      var u=prompt('Units',p.units);if(u===null)return;
+      var r=prompt('Expected rent / month',p.expectedRent/100);if(r===null)return;
+      var c=parseAmt(r);if(!n.trim()||!(parseInt(u,10)>0)||c===null||c<0){alert('Those values don\u2019t look right. Nothing changed.');return}
+      p.name=n.trim();p.units=parseInt(u,10);p.expectedRent=c;p.sample=false;save();render()};
+    var pd=document.querySelectorAll('[data-pdel]');for(i=0;i<pd.length;i++)pd[i].onclick=function(){
+      var id=this.dataset.pdel,p=propById(id);
+      if(confirm('Delete "'+(p?p.name:'')+'" and ALL its entries?')){S.properties=S.properties.filter(function(x){return x.id!==id});
+        S.entries=S.entries.filter(function(x){return x.propertyId!==id});save();render()}};
+  }
+  if(view==='annual'){
+    document.getElementById('yprev').onclick=function(){curYear--;render()};
+    document.getElementById('ynext').onclick=function(){curYear++;render()};
+  }
+  if(view==='export'){
+    document.getElementById('xCSV').onclick=function(){download('rental-pnl-'+val('xProp')+'.csv',toCSV(val('xProp')),'text/csv')};
+    document.getElementById('xJSON').onclick=function(){download('rental-pnl-backup.json',JSON.stringify(S,null,2),'application/json')};
+    document.getElementById('xRestore').onchange=function(ev){
+      var f=ev.target.files[0];if(!f)return;var rd=new FileReader();
+      rd.onload=function(){try{var d=JSON.parse(rd.result);
+        if(!d||!Array.isArray(d.properties)||!Array.isArray(d.entries))throw 0;
+        if(confirm('Replace ALL current data with this backup?')){S=d;save();render()}}catch(e){alert('That file is not a valid backup.')}};
+      rd.readAsText(f)};
+    var xs=document.getElementById('xSample');
+    if(xs)xs.onclick=function(){S.properties=S.properties.filter(function(p){return !p.sample});
+      S.entries=S.entries.filter(function(e){return !e.sample});save();render()};
+    document.getElementById('xWipe').onclick=function(){
+      if(confirm('Delete EVERYTHING? This cannot be undone.')&&confirm('Last chance. Really wipe the ledger?')){S={properties:[],entries:[]};save();render()}};
+  }
+}
+
+document.getElementById('mprev').onclick=function(){curMonth=mshift(curMonth,-1);render()};
+document.getElementById('mnext').onclick=function(){curMonth=mshift(curMonth,1);render()};
+(function(){var t=document.querySelectorAll('#tabs button');
+for(var i=0;i<t.length;i++)t[i].onclick=function(){view=this.dataset.v;render()}})();
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
+render();
+</script>
+</body>
+</html>
